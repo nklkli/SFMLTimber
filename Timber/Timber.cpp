@@ -4,10 +4,22 @@ export module Timber;
 //using namespace sf;
 import std;
 
+auto getElapsedSeconds() {
+	static auto start = std::chrono::system_clock::now();
+	auto millis= duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
+	auto seconds = millis / 1000.0f;
+	return seconds;
+}
+
+float sinus(float frequency, float amplitude)
+{
+	const auto seconds = getElapsedSeconds();
+	return sin(frequency * std::numbers::pi * 2 * seconds) * amplitude;
+}
 
 float rand_clamp(int min, int max)
 {
-	return (rand() % (max - min)) + min;
+	return  static_cast<float>((rand() % abs(max - min)) + min);
 }
 
 void handleCount(
@@ -75,7 +87,8 @@ int main()
 
 	sf::Texture textureBee{ "assets/graphics/bee.png" };
 	sf::Sprite spriteBee{ textureBee };
-	spriteBee.setPosition({ 0,800 });
+	float beeY = 100.0f;
+	spriteBee.setPosition({ 0,beeY });
 	// Is the bee currently moving?
 	bool beeActive = false;
 	// How fast can the bee fly
@@ -133,7 +146,7 @@ int main()
 		{
 			// How fast is the bee
 			//srand(static_cast<int>(time(nullptr)));
-			beeSpeed = (rand() % 100) + 200.0f;
+			beeSpeed = (rand() % 50) + 100.0f;
 
 			// How high is the bee
 			//srand(static_cast<int>(time(nullptr)) * 10);
@@ -147,10 +160,15 @@ int main()
 		}
 		else// Move the bee
 		{
+
+			auto s = sinus(0.1f, 100);
+			std::println("{:.2f}", s);
+		
 			spriteBee.setPosition(
 				{
 					spriteBee.getPosition().x - (beeSpeed * dt.asSeconds()),
-					spriteBee.getPosition().y }
+					 s + beeY
+				}
 					);
 			// Has the bee reached the left-hand edge of the screen?
 			if (spriteBee.getPosition().x < -100)
