@@ -14,7 +14,7 @@ auto getElapsedSeconds() {
 float sinus(float frequency, float amplitude)
 {
 	const auto seconds = getElapsedSeconds();
-	return sin(frequency * std::numbers::pi * 2 * seconds) * amplitude;
+	return sinf(frequency * std::numbers::pi_v<float> * 2 * seconds) * amplitude;
 }
 
 float rand_clamp(int min, int max)
@@ -65,7 +65,7 @@ void handleCount(
 export
 int main()
 {
-	std::srand(std::time(nullptr));
+	std::srand(static_cast<unsigned int>(time(nullptr)));
 	sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
 
 	sf::RenderWindow window(
@@ -75,6 +75,7 @@ int main()
 		, sf::Style::Default
 		//, sf::State::Fullscreen
 	);
+
 
 	window.setVerticalSyncEnabled(true);
 
