@@ -3,10 +3,12 @@ module;
 export module Timber;
 //using namespace sf;
 import std;
+using std::chrono::system_clock;
+
 
 auto getElapsedSeconds() {
-	static auto start = std::chrono::system_clock::now();
-	auto millis= duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
+	static auto start = system_clock::now();
+	auto millis = duration_cast<std::chrono::milliseconds>(system_clock::now() - start).count();
 	auto seconds = millis / 1000.0f;
 	return seconds;
 }
@@ -14,7 +16,7 @@ auto getElapsedSeconds() {
 float sinus(float frequency, float amplitude)
 {
 	const auto seconds = getElapsedSeconds();
-	return sinf(frequency * std::numbers::pi_v<float> * 2 * seconds) * amplitude;
+	return sinf(frequency * std::numbers::pi_v<float> *2 * seconds) * amplitude;
 }
 
 float rand_clamp(int min, int max)
@@ -37,11 +39,11 @@ void handleCount(
 	{
 		// How fast is the cloud
 		cloudSpeed = rand_clamp(50, 100);
-				
+
 		// How high is the cloud
-		float height =rand_clamp(0,200);
-		float x = rand_clamp(-1000,-200);
-		spriteCloud.setPosition({ x, height});
+		float height = rand_clamp(0, 200);
+		float x = rand_clamp(-1000, -200);
+		spriteCloud.setPosition({ x, height });
 		cloudActive = true;
 	}
 	else
@@ -52,7 +54,7 @@ void handleCount(
 			});
 
 		// Has the cloud reached the right hand edge of the screen?
-		if (spriteCloud.getPosition().x > window.getSize().x+350)
+		if (spriteCloud.getPosition().x > window.getSize().x + 350)
 		{
 			// Set it up ready to be a whole new cloud next frame
 			cloudActive = false;
@@ -105,7 +107,7 @@ int main()
 	// at different heights
 	spriteCloud1.setPosition({ 0, 0 });
 	spriteCloud2.setPosition({ 0, 100 });
-	spriteCloud3.setPosition({ 0, 200});
+	spriteCloud3.setPosition({ 0, 200 });
 	// Are the clouds currently on screen?
 	bool cloud1Active = false;
 	bool cloud2Active = false;
@@ -119,16 +121,40 @@ int main()
 	shape.setFillColor(sf::Color::Green);*/
 
 	sf::Clock clock{};
+	bool paused = true;
+	int score = 0;
+
+	sf::Font font{ "assets/fonts/KOMIKAP_.ttf" };
+	sf::Text messageText{ font, "Press ENTER to start!", 75 };
+	messageText.setFillColor(sf::Color::White);
+	
+	sf::Text scoreText{ font, "Score = 0", 100 };
+	scoreText.setFillColor(sf::Color::White);
+
+	messageText.setOrigin(messageText.getLocalBounds().getCenter());
+	messageText.setPosition({
+		window.getSize().x/2.0f,
+		window.getSize().y / 2.0f,
+		});
+	scoreText.setPosition({ 20,20 });
+
 
 	while (window.isOpen())
 	{
-		
+
 		sf::Time dt = clock.restart();
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Escape))
 		{
 			window.close();
 		}
+
+		// Start the game		
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Enter))
+		{
+			paused = false;
+		}
+
 
 		while (const std::optional event = window.pollEvent())
 		{
@@ -143,48 +169,56 @@ int main()
 
 		}
 
-		if (!beeActive)
-		{
-			// How fast is the bee
-			//srand(static_cast<int>(time(nullptr)));
-			beeSpeed = (rand() % 50) + 100.0f;
+		if (!paused) {
 
-			// How high is the bee
-			//srand(static_cast<int>(time(nullptr)) * 10);
-			float height = (rand() % 500) + 50.f;
-			spriteBee.setPosition(
-				{
-				static_cast<float>(window.getSize().x),
-				height }
-				);
-			beeActive = true;
-		}
-		else// Move the bee
-		{
-
-			auto s = sinus(0.1f, 100);
-			std::println("{:.2f}", s);
-		
-			spriteBee.setPosition(
-				{
-					spriteBee.getPosition().x - (beeSpeed * dt.asSeconds()),
-					 s + beeY
-				}
-					);
-			// Has the bee reached the left-hand edge of the screen?
-			if (spriteBee.getPosition().x < -100)
+			if (!beeActive)
 			{
-				// Set it up ready to be a whole new bee next frame
-				beeActive = false;
+				// How fast is the bee
+				//srand(static_cast<int>(time(nullptr)));
+				beeSpeed = (rand() % 50) + 100.0f;
+
+				// How high is the bee
+				//srand(static_cast<int>(time(nullptr)) * 10);
+				float height = (rand() % 500) + 50.f;
+				spriteBee.setPosition(
+					{
+					static_cast<float>(window.getSize().x),
+					height }
+					);
+				beeActive = true;
 			}
+			else// Move the bee
+			{
+				spriteBee.setPosition(
+					{
+						spriteBee.getPosition().x - (beeSpeed * dt.asSeconds()),
+						 beeY + sinus(0.1f, 100)
+					}
+				);
+				// Has the bee reached the left-hand edge of the screen?
+				if (spriteBee.getPosition().x < -100)
+				{
+					// Set it up ready to be a whole new bee next frame
+					beeActive = false;
+				}
+			}
+
+			// Manage the clouds
+			// Cloud 1
+			handleCount(window, dt, 0, cloud1Active, cloud1Speed, spriteCloud1);
+			handleCount(window, dt, 1, cloud2Active, cloud2Speed, spriteCloud2);
+			handleCount(window, dt, 2, cloud3Active, cloud3Speed, spriteCloud3);
+
+			score += 1;
+			
+			auto newScore = std::format("{}{}", "Score = ", score);
+			scoreText.setString(newScore);
 		}
 
-		// Manage the clouds
-		// Cloud 1
-		handleCount(window,dt, 0, cloud1Active, cloud1Speed, spriteCloud1);
-		handleCount(window,dt, 1, cloud2Active, cloud2Speed, spriteCloud2);
-		handleCount(window, dt, 2, cloud3Active, cloud3Speed, spriteCloud3);
-
+		/* ************************************************* 
+							DRAW THE SCENE 
+		****************************************************
+		*/
 		window.clear();
 		window.draw(spriteBackground);
 		// Draw the clouds
@@ -196,6 +230,11 @@ int main()
 		// Draw the insect
 		window.draw(spriteBee);
 		//window.draw(shape);
+
+		window.draw(scoreText);
+		if (paused) {
+			window.draw(messageText);
+		}
 		window.display();
 	}
 }
