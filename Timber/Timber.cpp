@@ -62,7 +62,15 @@ void handleCount(
 	}
 }
 
-//int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
+
+void updateBranches(int seed);
+constexpr int NUM_BRANCHES = 6;
+std::unique_ptr<sf::Sprite> branches[NUM_BRANCHES];
+// Where is the player/branch?
+// Left or Right
+enum class Side{LEFT,RIGHT,NONE};
+Side branchPositions[NUM_BRANCHES];
+
 
 export
 int main()
@@ -124,25 +132,35 @@ int main()
 	bool paused = true;
 	int score = 0;
 
+	sf::RectangleShape timeBar;
+	float timeBarStartWidth = 400;
+	float timeBarHeight = 80;
+	timeBar.setFillColor(sf::Color::Red);
+	timeBar.setOrigin({ 200,40 });
+	timeBar.setPosition({ window.getSize().x / 2.f, window.getSize().y - 50.f });
+	sf::Time gameTimeTotoal;
+	float timeRemaining = 6;
+	float timeBarWidthPerSecond = timeBarStartWidth / timeRemaining;
+
 	sf::Font font{ "assets/fonts/KOMIKAP_.ttf" };
 	sf::Text messageText{ font, "Press ENTER to start!", 75 };
 	messageText.setFillColor(sf::Color::White);
-	
+	messageText.setOrigin(messageText.getLocalBounds().getCenter());
+	messageText.setPosition({
+		window.getSize().x / 2.0f,
+		window.getSize().y / 2.0f,
+		});
+
 	sf::Text scoreText{ font, "Score = 0", 100 };
 	scoreText.setFillColor(sf::Color::White);
 
-	messageText.setOrigin(messageText.getLocalBounds().getCenter());
-	messageText.setPosition({
-		window.getSize().x/2.0f,
-		window.getSize().y / 2.0f,
-		});
 	scoreText.setPosition({ 20,20 });
 
 
 	while (window.isOpen())
 	{
 
-		sf::Time dt = clock.restart();
+
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Escape))
 		{
@@ -153,6 +171,9 @@ int main()
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Enter))
 		{
 			paused = false;
+			score = 0;
+			timeRemaining = 6;
+			clock.start();
 		}
 
 
@@ -169,7 +190,30 @@ int main()
 
 		}
 
+		/*
+		**********************************************
+		Update the scene
+		********************************************
+		*/
 		if (!paused) {
+			// Measure time
+			sf::Time dt = clock.restart();
+			timeRemaining -= dt.asSeconds();
+			timeBar.setSize({
+				timeBarWidthPerSecond * timeRemaining,
+				timeBarHeight
+				});
+
+			if (timeRemaining <= 0) {
+				clock.reset();
+				paused = true;
+				messageText.setString("Out of time!");
+				messageText.setOrigin(messageText.getLocalBounds().getCenter());
+				messageText.setPosition({
+					window.getSize().x / 2.f,
+					window.getSize().y / 2.f
+					});
+			}
 
 			if (!beeActive)
 			{
@@ -209,14 +253,14 @@ int main()
 			handleCount(window, dt, 1, cloud2Active, cloud2Speed, spriteCloud2);
 			handleCount(window, dt, 2, cloud3Active, cloud3Speed, spriteCloud3);
 
-			score += 1;
 			
+
 			auto newScore = std::format("{}{}", "Score = ", score);
 			scoreText.setString(newScore);
 		}
 
-		/* ************************************************* 
-							DRAW THE SCENE 
+		/* *************************************************
+							DRAW THE SCENE
 		****************************************************
 		*/
 		window.clear();
@@ -232,6 +276,8 @@ int main()
 		//window.draw(shape);
 
 		window.draw(scoreText);
+		window.draw(timeBar);
+
 		if (paused) {
 			window.draw(messageText);
 		}
