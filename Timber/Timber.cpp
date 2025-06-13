@@ -156,6 +156,15 @@ int main()
 
 	scoreText.setPosition({ 20,20 });
 
+	sf::Texture textureBranch{"asssets/graphics/branch.png"};
+	for (int i = 0; i < NUM_BRANCHES; ++i)
+	{
+		branches[i].reset(new sf::Sprite{ textureBranch });
+		branches[i]->setPosition({-2000, -2000});
+		branches[i]->setOrigin({220,20});
+	}
+	
+
 
 	while (window.isOpen())
 	{
@@ -257,6 +266,29 @@ int main()
 
 			auto newScore = std::format("{}{}", "Score = ", score);
 			scoreText.setString(newScore);
+
+			/**************************************
+			 * UPDATE THE BRANCH SPRITES
+			 **************************************/
+			for (int i = 0; i < NUM_BRANCHES; ++i)
+			{
+				float height = i * 150.f;
+				if (branchPositions[i]==Side::LEFT)
+				{
+					//move the sprite to the left side
+					branches[i]->setPosition({ 610,height });
+					branches[i]->setRotation(sf::degrees(180));
+				}else if (branchPositions[i]==Side::RIGHT)
+				{
+					// move the branch to right side
+					branches[i]->setPosition({1330, height});
+					branches[i]->setRotation(sf::degrees(0));
+				}else
+				{
+					//hide the branch
+					branches[i]->setPosition({-3000, height});
+				}
+			}
 		}
 
 		/* *************************************************
@@ -269,6 +301,12 @@ int main()
 		window.draw(spriteCloud1);
 		window.draw(spriteCloud2);
 		window.draw(spriteCloud3);
+
+		for (int i = 0; i < NUM_BRANCHES; ++i)
+		{
+			window.draw(*branches[i].get());
+		}
+
 		// Draw the tree
 		window.draw(spriteTree);
 		// Draw the insect
