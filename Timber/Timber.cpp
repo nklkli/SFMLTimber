@@ -8,6 +8,13 @@ using std::chrono::system_clock;
 
 //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
+void log(std::string msg) {
+	static auto tz = std::chrono::current_zone();
+	auto tp = tz->to_local(std::chrono::system_clock::now());
+	std::println("{:%H:%M:%S} {}", tp, msg);
+}
+
+
 auto getElapsedSeconds() {
 	static auto start = system_clock::now();
 	auto millis = duration_cast<std::chrono::milliseconds>(system_clock::now() - start).count();
@@ -124,8 +131,13 @@ int main()
 
 	sf::Text scoreText{ font, "Score = 0", 100 };
 	scoreText.setFillColor(sf::Color::White);
-
 	scoreText.setPosition({ 20,20 });
+
+	sf::Text fpsText{ font,"",100 };
+	fpsText.setFillColor((sf::Color::White));
+	fpsText.setPosition({ window.getSize().x - 200.f, 20 });
+
+
 
 	sf::Texture textureBranch{ "assets/graphics/branch.png" };
 	for (int i = 0; i < NUM_BRANCHES; ++i)
@@ -166,20 +178,34 @@ int main()
 	float logSpeedX = 1000;
 	float logSpeedY = -1500;
 
+	sf::SoundBuffer chopBuffer{ "assets/sound/chop.wav" };
+	sf::Sound chop{ chopBuffer };
+
+	sf::SoundBuffer deathBuffer{ "assets/sound/death.wav" };
+	sf::Sound death{ deathBuffer};
+
+	sf::SoundBuffer ootBuffer{ "assets/sound/out_of_time.wav" };
+	sf::Sound outOfTime{ ootBuffer };
+
+
+	
+
+
+	bool keyReleased = true;
 
 	while (window.isOpen())
 	{
 
-
 		while (const auto e = window.pollEvent())
 		{
 			if (e->is<sf::Event::Closed>()) {
-			
+
 				window.close();
 			}
 			else if (e->is<sf::Event::KeyReleased>()) {
+				keyReleased = true;
 				if (paused) {  // PAUSE
-					
+
 				}
 				else { // PLAYING
 					spriteAxe.setPosition({ 2000,spriteAxe.getPosition().y });
@@ -188,11 +214,14 @@ int main()
 			else if (const auto kp = e->getIf<sf::Event::KeyPressed>()) {
 				if (kp->scancode == sf::Keyboard::Scancode::Escape) {
 					window.close();
-				}				
-				else if (kp->scancode == sf::Keyboard::Scan::Enter)		
+				}
+				else if (kp->scancode == sf::Keyboard::Scan::Enter)
 				{
-					if (paused) { // Start the game
-						std::println("{}", "Start the game");
+					/*******************************************
+					 *		START THE GAME
+					 ******************************************/
+					if (paused) { 
+						log( "Start the game");
 						paused = false;
 						score = 0;
 						timeRemaining = 6;
@@ -208,47 +237,56 @@ int main()
 						spritePlayer.setPosition({ 580, 720 });
 					}
 				}
-				else if (kp->scancode == sf::Keyboard::Scan	code::Right) {
-					std::println("{}", "рубит справа");
-					playerSide = Side::RIGHT;
-					score++;
-					timeRemaining += (2.f / score) + .15f;
-					spriteAxe.setPosition({
-						AXE_POSITION_RIGHT,
-						spriteAxe.getPosition().y
-						});
-					spritePlayer.setPosition({
-						1200, 720
-						});
 
-					updateBranches(score);
 
-					// set the log flying to the left
-					spriteLog.setPosition({ 810, 720 });
-					logSpeedX = -5000;
-					logActive = true;
-				}
-				else if (kp->scancode == sf::Keyboard::Scancode::Left) {
-					std::println("{}", "рубит слева");
-					playerSide = Side::LEFT;
-					score++;
-					timeRemaining += (2.f / score) + .15f;
-					spriteAxe.setPosition({
-						AXE_POSITION_LEFT,
-						spriteAxe.getPosition().y
-						});
-					spritePlayer.setPosition({ 580, 720 });
+				if (!paused) {
+					// chop right from tree
+					if (kp->scancode == sf::Keyboard::Scancode::Right && keyReleased) {
+						keyReleased = false;
+						log("рубит справа");
+						playerSide = Side::RIGHT;
+						score++;
+						timeRemaining += (2.f / score) + .15f;
+						spriteAxe.setPosition({
+							AXE_POSITION_RIGHT,
+							spriteAxe.getPosition().y
+							});
+						spritePlayer.setPosition({
+							1200, 720
+							});
 
-					updateBranches(score);
+						updateBranches(score);
 
-					// set the log flying to the left
-					spriteLog.setPosition({ 810, 720 });
-					logSpeedX = 5000;
-					logActive = true;
+						// set the log flying to the left
+						spriteLog.setPosition({ 810, 720 });
+						logSpeedX = -5000;
+						logActive = true;
+						chop.play();
+					}
+					// chop left from tree
+					else if (kp->scancode == sf::Keyboard::Scancode::Left && keyReleased) {
+						keyReleased = false;
+						log( "рубит слева");
+						playerSide = Side::LEFT;
+						score++;
+						timeRemaining += (2.f / score) + .15f;
+						spriteAxe.setPosition({
+							AXE_POSITION_LEFT,
+							spriteAxe.getPosition().y
+							});
+						spritePlayer.setPosition({ 580, 720 });
+
+						updateBranches(score);
+
+						// set the log flying to the left
+						spriteLog.setPosition({ 810, 720 });
+						logSpeedX = 5000;
+						logActive = true;
+						chop.play();
+					}
 				}
 			}
 		}
-
 
 
 
@@ -262,11 +300,15 @@ int main()
 			// Measure time
 			sf::Time dt = clock.restart();
 			timeRemaining -= dt.asSeconds();
+			//float fps = 1 / dt.asSeconds();
+			//fpsText.setString(std::format("{:.0f}", fps));
+
 			timeBar.setSize({
 				timeBarWidthPerSecond * timeRemaining,
 				timeBarHeight
 				});
 
+			/// OUT OF TIME
 			if (timeRemaining <= 0) {
 				clock.reset();
 				paused = true;
@@ -276,8 +318,12 @@ int main()
 					window.getSize().x / 2.f,
 					window.getSize().y / 2.f
 					});
+				outOfTime.play();
 			}
 
+			/******************************************
+			 *               BE FLYING
+			 *****************************************/
 			if (!beeActive)
 			{
 				// How fast is the bee
@@ -294,7 +340,7 @@ int main()
 					);
 				beeActive = true;
 			}
-			else// Move the bee
+			else // Move the bee
 			{
 				spriteBee.setPosition(
 					{
@@ -311,13 +357,11 @@ int main()
 			}
 
 			// Manage the clouds
-			// Cloud 1
 			handleClouds(window, dt, 0, cloud1Active, cloud1Speed, spriteCloud1);
 			handleClouds(window, dt, 1, cloud2Active, cloud2Speed, spriteCloud2);
 			handleClouds(window, dt, 2, cloud3Active, cloud3Speed, spriteCloud3);
 
-
-
+			// SCORE
 			auto newScore = std::format("{}{}", "Score = ", score);
 			scoreText.setString(newScore);
 
@@ -346,6 +390,54 @@ int main()
 					branches[i]->setPosition({ -3000, height });
 				}
 			}
+
+			/********************************************************
+			 *           make LOG FLYING after a chop
+			 *******************************************************/
+			if (logActive)
+			{
+				spriteLog.setPosition({
+					spriteLog.getPosition().x + (logSpeedX * dt.asSeconds()),
+					spriteLog.getPosition().y + (logSpeedY * dt.asSeconds())
+					});
+
+				// Has the log reached the right hand edge?
+				if (spriteLog.getPosition().x < -100 ||
+					spriteLog.getPosition().x > 2000)
+				{
+					// Set it up ready to be a whole new log next frame
+					logActive = false;
+					spriteLog.setPosition({ 810, 720 });
+				}
+			}
+
+			
+			// STOP GAMEPLAY if the player has been squished by a branch
+			if (branchPositions[5] == playerSide)
+			{
+				// death
+				paused = true;
+
+				spriteLog.setPosition({ 810, 720 });
+
+				// Draw the gravestone
+				spriteRIP.setPosition({ 525, 760 });
+
+				// hide the player
+				spritePlayer.setPosition({ 2000, 660 });
+
+				// Change the text of the message
+				messageText.setString("SQUISHED!!");
+				death.play();
+				log("SQUISHED!!");
+
+				// Center it on the screen
+				messageText.setOrigin(messageText.getLocalBounds().getCenter());
+				messageText.setPosition({
+					1920 / 2.0f,
+					1080 / 2.0f });
+			}
+
 		}
 
 		/* *************************************************
@@ -377,6 +469,7 @@ int main()
 
 		window.draw(scoreText);
 		window.draw(timeBar);
+		window.draw(fpsText);
 
 		if (paused) {
 			window.draw(messageText);
@@ -385,7 +478,7 @@ int main()
 	}
 
 
-	_CrtDumpMemoryLeaks();
+	//_CrtDumpMemoryLeaks();
 	return  0;
 }
 
